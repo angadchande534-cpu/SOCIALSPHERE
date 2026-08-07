@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+social_media.db
+.DS_Store
+.vscode/
+uploads/**
+!uploads/**/.gitkeep
