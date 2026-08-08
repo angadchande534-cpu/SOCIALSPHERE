@@ -1474,7 +1474,7 @@
                     id="signupMessage"
                 ></div>
 
-                <form id="signupForm">
+                <form id="signupForm" class="signup-form"></form>              
 
                     <div class="form-row">
 
@@ -1964,43 +1964,44 @@
                             }
                         );
 
-                    const data =
-                        await response.json();
+                   const rawText = await response.text();
 
-                    if (!response.ok) {
+console.log("SIGNUP STATUS:", response.status);
+console.log("SIGNUP RESPONSE:", rawText);
 
-                        throw new Error(
-                            data.detail ||
-                            "Unable to create account."
-                        );
+let data = {};
 
-                    }
+try {
+    data = rawText ? JSON.parse(rawText) : {};
+} catch (error) {
+    throw new Error(
+        `Server returned invalid response (${response.status}): ${rawText.slice(0, 200)}`
+    );
+}
 
-                    saveAuthToken(
-                        data.access_token,
-                        true
-                    );
+if (!response.ok) {
+    throw new Error(
+        data.detail || "Could not create account"
+    );
+}
 
-                    localStorage.setItem(
-                        SAVED_LOGIN_KEY,
-                        email
-                    );
+/* SAVE LOGIN TOKEN */
+if (!data.access_token) {
+    throw new Error("Account created but no login token was returned.");
+}
 
-                    showMessage(
-                        "Account created successfully! Opening your feed...",
-                        "success"
-                    );
+localStorage.setItem("access_token", data.access_token);
+localStorage.setItem("token", data.access_token);
 
-                    setTimeout(
-                        function () {
+/* SUCCESS MESSAGE */
+signupMessage.className = "signup-message success";
+signupMessage.textContent = "Account created successfully!";
 
-                            window.location.href =
-                                "/feed-page";
-
-                        },
-                        1200
-                    );
-
+/* GO TO FEED */
+setTimeout(() => {
+    window.location.href = "/feed";
+}, 500);
+                    
                 } catch (error) {
 
                     showMessage(
@@ -2012,10 +2013,11 @@
                     setLoading(false);
 
                 }
+});
 
-            }
-        );
-    </script>
+            
+        
+</script>
 
 </body>
 </html>
