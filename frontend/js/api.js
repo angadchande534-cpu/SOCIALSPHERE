@@ -89,27 +89,53 @@ async function api(path, options = {}) {
     throw new Error("Cannot connect to the backend. Start FastAPI and refresh the page.");
   }
 
-  let data = {};
-  try {
-    data = await response.json();
-  } catch (_error) {
-    data = {};
-  }
+  
+const rawText = await response.text();
 
-  if (!response.ok) {
-    const isLoginAction =
-      path.includes("/api/auth/login") || path.includes("/api/auth/signup");
-    const alreadyOnLogin = window.location.pathname.startsWith("/login");
-    if (response.status === 401 && !isLoginAction) {
-      clearAuthToken();
-      if (!alreadyOnLogin) window.location.replace(loginPage());
-    }
-    throw new Error(errorMessage(data.detail));
-  }
+let data = {};
 
-  return data;
+try {
+    data = rawText ? JSON.parse(rawText) : {};
+} catch (error) {
+    console.error("API returned NON-JSON:", {
+        path: path,
+        status: response.status,
+        body: rawText
+    });
+
+    throw new Error(
+        `Server returned non-JSON (${response.status}): ${rawText.slice(0, 200)}`
+    );
 }
 
+
+if (!response.ok) {
+
+    const isLoginAction =
+        path.includes("/api/auth/login") ||
+        path.includes("/api/auth/signup");
+
+    const alreadyOnLogin =
+        window.location.pathname.startsWith("/login");
+
+
+    if (response.status === 401 && !isLoginAction) {
+
+        clearAuthToken();
+
+        if (!alreadyOnLogin) {
+            window.location.replace(loginPage());
+        }
+    }
+
+
+    throw new Error(
+        errorMessage(data.detail || `Request failed (${response.status})`)
+    );
+}
+
+
+return data;
 function jwtPayload(accessToken) {
   try {
     const part = accessToken.split(".")[1];
