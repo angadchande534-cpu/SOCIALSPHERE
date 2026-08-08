@@ -7,3 +7,4 @@ social_media.db
 .vscode/
 uploads/**
 !uploads/**/.gitkeep
+.history/

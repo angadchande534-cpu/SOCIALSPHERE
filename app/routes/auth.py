@@ -85,3 +85,64 @@ def me(current: User = Depends(get_current_user)):
 @router.post("/refresh", response_model=Token)
 def refresh(current: User = Depends(get_current_user)):
     return Token(access_token=create_access_token(current.id))
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, EmailStr
+import os
+
+from supabase import create_client, Client
+
+
+router = APIRouter(
+    prefix="/api/auth",
+    tags=["Authentication"]
+)
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("WARNING: Supabase environment variables are missing.")
+
+
+supabase: Client = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+
+    try:
+
+        supabase.auth.reset_password_email(
+            data.email,
+            options={
+                "redirect_to":
+                "http://127.0.0.1:8000/reset-password"
+            }
+        )
+
+        return {
+            "success": True,
+            "message":
+            "If the account exists, a password reset email has been sent."
+        }
+
+    except Exception as e:
+
+        print("Forgot password error:", e)
+
+        # Don't reveal whether email exists
+        return {
+            "success": True,
+            "message":
+            "If the account exists, a password reset email has been sent."
+        }

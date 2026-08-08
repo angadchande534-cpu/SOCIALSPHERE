@@ -1,9 +1,13 @@
 from pathlib import Path
+from tempfile import template
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 
 from app.database import Base, engine
 from app.routes import auth, calls, messages, notifications, posts, reels, social, stories, users
@@ -11,6 +15,7 @@ from app.routes import auth, calls, messages, notifications, posts, reels, socia
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 UPLOAD_DIR = BASE_DIR / "uploads"
+custom_page = FRONTEND_DIR / "404.html"
 
 for folder in ("profiles", "posts", "stories", "messages", "reels", "covers"):
     UPLOAD_DIR.joinpath(folder).mkdir(parents=True, exist_ok=True)
@@ -21,6 +26,10 @@ app = FastAPI(
     description="Instagram-style SocialSphere with photo/video posts, stories, messages, likes, comments and notifications.",
     version="5.0.0",
 )
+
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+custom_page = FRONTEND_DIR / "404.html"
 
 app.add_middleware(
     CORSMiddleware,
@@ -93,21 +102,56 @@ def page_response(filename: str):
         return JSONResponse({"detail": f"Page {filename} is missing"}, status_code=404)
     return FileResponse(target)
 
-
 for route, filename in PAGES.items():
     async def page(filename: str = filename):
         return page_response(filename)
-    app.add_api_route(route, page, methods=["GET"], include_in_schema=False)
 
-
+    app.add_api_route(
+        route,
+        page,
+        methods=["GET"],
+        include_in_schema=False
+    )
 @app.get("/health", tags=["System"])
 def health():
     return {"status": "ok", "message": "SocialSphere backend is running", "version": "5.0.0"}
 
 
 @app.exception_handler(404)
-async def not_found(_request: Request, _exc):
-    custom_page = FRONTEND_DIR / "404.html"
+async def not_found(request: Request, exc):
     if custom_page.is_file():
         return FileResponse(custom_page, status_code=404)
-    return JSONResponse({"detail": "Not found"}, status_code=404)
+
+    return JSONResponse(
+        {"detail": "Not found"},
+        status_code=404
+    )
+
+
+@app.get("/video-call", response_class=HTMLResponse)
+async def video_call(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="video_call.html",
+        context={}
+    )
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "message": "SocialSphere backend is running",
+        "version": "5.0.0"
+    }
+
+
+# ===============================
+# VIDEO CALL PAGE
+# ===============================
+
+@app.get("/video-call", response_class=HTMLResponse)
+async def video_call(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="video_call.html",
+        context={}
+    )
