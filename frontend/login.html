@@ -382,11 +382,26 @@
                     body: JSON.stringify({identifier, password})
                 });
 
-                saveAuthToken(data.access_token);
-                localStorage.setItem(SAVED_LOGIN_KEY, identifier);
+                if (!data || !data.access_token) {
+    throw new Error("Login succeeded but no access token was returned.");
+}
 
-                showMessage("Login successful! Redirecting...", "success");
-                window.setTimeout(() => window.location.replace(nextPage), 450);
+saveAuthToken(data.access_token);
+
+/* Keep token available for pages that use different key names */
+localStorage.setItem("access_token", data.access_token);
+localStorage.setItem("token", data.access_token);
+
+localStorage.setItem(SAVED_LOGIN_KEY, identifier);
+
+console.log("LOGIN SUCCESS");
+console.log("Redirecting to:", nextPage);
+
+showMessage("Login successful! Redirecting...", "success");
+
+setTimeout(() => {
+    window.location.href = nextPage || "/feed";
+}, 500);
             } catch (error) {
                 showMessage(error.message || "Unable to connect to the server.", "error");
                 setLoading(false);
